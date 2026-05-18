@@ -21,11 +21,14 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.widget.Autocomplete;
+import com.google.android.libraries.places.widget.AutocompleteActivity;
 import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
 
 import java.util.Arrays;
@@ -130,6 +133,9 @@ public class AddItemActivity extends AppCompatActivity {
                             hasSelectedCoordinates = true;
                         }
                         locationEditText.setText(place.getAddress());
+                    } else if (result.getResultCode() == AutocompleteActivity.RESULT_ERROR && result.getData() != null) {
+                        Status status = Autocomplete.getStatusFromIntent(result.getData());
+                        Toast.makeText(this, "Places error: " + status.getStatusMessage(), Toast.LENGTH_LONG).show();
                     }
                 }
         );
@@ -163,10 +169,10 @@ public class AddItemActivity extends AppCompatActivity {
             return;
         }
 
-        fusedLocationClient.getLastLocation()
+        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
                 .addOnSuccessListener(location -> {
                     if (location == null) {
-                        Toast.makeText(this, "Current location is not available yet", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Turn on device location and try again", Toast.LENGTH_SHORT).show();
                         return;
                     }
 
