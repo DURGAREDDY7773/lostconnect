@@ -7,34 +7,32 @@ import android.location.Address;
 import android.location.Geocoder;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
 import com.google.android.libraries.places.api.Places;
-import com.google.android.libraries.places.api.model.AutocompletePrediction;
-import com.google.android.libraries.places.api.model.AutocompleteSessionToken;
-import com.google.android.libraries.places.api.model.Place;
-import com.google.android.libraries.places.api.net.FetchPlaceRequest;
-import com.google.android.libraries.places.api.net.PlacesClient;
-import com.google.android.libraries.places.widget.PlaceAutocomplete;
-import com.google.android.libraries.places.widget.PlaceAutocompleteActivity;
 
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -58,7 +56,6 @@ public class AddItemActivity extends AppCompatActivity {
     String[] categories = {"Electronics", "Pets", "Wallets", "Documents", "Keys", "Others"};
 
     ActivityResultLauncher<String> imagePickerLauncher;
-    ActivityResultLauncher<Intent> autocompleteLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,7 +80,7 @@ public class AddItemActivity extends AppCompatActivity {
         setupLaunchers();
 
         locationEditText.setFocusable(false);
-        locationEditText.setOnClickListener(v -> openLocationAutocomplete());
+        locationEditText.setOnClickListener(v -> showAddressSearchDialog());
         currentLocationButton.setOnClickListener(v -> getCurrentLocation());
         selectImageButton.setOnClickListener(v -> imagePickerLauncher.launch("image/*"));
         saveButton.setOnClickListener(v -> saveItem());
@@ -125,55 +122,100 @@ public class AddItemActivity extends AppCompatActivity {
                 }
         );
 
-        autocompleteLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    if (result.getResultCode() == PlaceAutocompleteActivity.RESULT_OK && result.getData() != null) {
-                        AutocompletePrediction prediction = PlaceAutocomplete.getPredictionFromIntent(result.getData());
-                        AutocompleteSessionToken sessionToken = PlaceAutocomplete.getSessionTokenFromIntent(result.getData());
-                        if (prediction != null) {
-                            fetchSelectedPlace(prediction.getPlaceId(), sessionToken, prediction.getFullText(null).toString());
-                        }
-                    } else if (result.getResultCode() == PlaceAutocompleteActivity.RESULT_ERROR && result.getData() != null) {
-                        Status status = PlaceAutocomplete.getResultStatusFromIntent(result.getData());
-                        Toast.makeText(this, "Places error: " + status.getStatusMessage(), Toast.LENGTH_LONG).show();
+    }
+
+    private void showAddressSearchDialog() {
+        LinearLayout layout = new LinearLayout(this);
+        layout.setPadding(40, 20, 40, 0);
+        layout.setOrientation(LinearLayout.VERTICAL);
+
+        AutoCompleteTextView addressInput = new AutoCompleteTextView(this);
+        addressInput.setHint("Search address");
+        addressInput.setThreshold(3);
+        layout.addView(addressInput);
+
+        ArrayList<AddressOption> addressOptions = new ArrayList<>();
+        ArrayAdapter<AddressOption> adapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_dropdown_item_1line,
+                addressOptions
+        );
+        addressInput.setAdapter(adapter);
+
+        addressInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                String query = s.toString().trim();
+                if (query.length() < 3) {
+                    return;
+                }
+
+                addressOptions.clear();
+                addressOptions.addAll(searchAddresses(query));
+                adapter.notifyDataSetChanged();
+                addressInput.showDropDown();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
+
+        addressInput.setOnItemClickListener((parent, view, position, id) -> {
+            AddressOption option = addressOptions.get(position);
+            selectedLatitude = option.latitude;
+            selectedLongitude = option.longitude;
+            hasSelectedCoordinates = true;
+            locationEditText.setText(option.address);
+        });
+
+        new AlertDialog.Builder(this)
+                .setTitle("Search Location")
+                .setView(layout)
+                .setPositiveButton("Use Location", (dialog, which) -> {
+                    if (hasSelectedCoordinates) {
+                        return;
+                    }
+
+                    List<AddressOption> matches = searchAddresses(addressInput.getText().toString().trim());
+                    if (matches.isEmpty()) {
+                        Toast.makeText(this, "Unable to find that address", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    AddressOption option = matches.get(0);
+                    selectedLatitude = option.latitude;
+                    selectedLongitude = option.longitude;
+                    hasSelectedCoordinates = true;
+                    locationEditText.setText(option.address);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private List<AddressOption> searchAddresses(String query) {
+        ArrayList<AddressOption> results = new ArrayList<>();
+        try {
+            Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+            List<Address> addresses = geocoder.getFromLocationName(query, 5);
+            if (addresses != null) {
+                for (Address address : addresses) {
+                    if (address.hasLatitude() && address.hasLongitude()) {
+                        results.add(new AddressOption(
+                                address.getAddressLine(0),
+                                address.getLatitude(),
+                                address.getLongitude()
+                        ));
                     }
                 }
-        );
-    }
-
-    private void openLocationAutocomplete() {
-        if (!Places.isInitialized()) {
-            Toast.makeText(this, "Add your Google Maps API key first", Toast.LENGTH_SHORT).show();
-            return;
+            }
+        } catch (Exception ignored) {
         }
-
-        Intent intent = new PlaceAutocomplete.IntentBuilder()
-                .build(this);
-        autocompleteLauncher.launch(intent);
-    }
-
-    private void fetchSelectedPlace(String placeId, AutocompleteSessionToken sessionToken, String fallbackAddress) {
-        PlacesClient placesClient = Places.createClient(this);
-        List<Place.Field> fields = Arrays.asList(Place.Field.ADDRESS, Place.Field.LAT_LNG);
-        FetchPlaceRequest request = FetchPlaceRequest.builder(placeId, fields)
-                .setSessionToken(sessionToken)
-                .build();
-
-        placesClient.fetchPlace(request)
-                .addOnSuccessListener(response -> {
-                    Place place = response.getPlace();
-                    if (place.getLatLng() != null) {
-                        selectedLatitude = place.getLatLng().latitude;
-                        selectedLongitude = place.getLatLng().longitude;
-                        hasSelectedCoordinates = true;
-                    }
-
-                    String address = place.getAddress() != null ? place.getAddress() : fallbackAddress;
-                    locationEditText.setText(address);
-                })
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Unable to load selected place details", Toast.LENGTH_SHORT).show());
+        return results;
     }
 
     private void getCurrentLocation() {
@@ -275,6 +317,24 @@ public class AddItemActivity extends AppCompatActivity {
             finish();
         } else {
             Toast.makeText(this, "Failed to save post", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private static class AddressOption {
+        String address;
+        double latitude;
+        double longitude;
+
+        AddressOption(String address, double latitude, double longitude) {
+            this.address = address;
+            this.latitude = latitude;
+            this.longitude = longitude;
+        }
+
+        @NonNull
+        @Override
+        public String toString() {
+            return address;
         }
     }
 }
