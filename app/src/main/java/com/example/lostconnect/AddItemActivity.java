@@ -48,7 +48,7 @@ public class AddItemActivity extends AppCompatActivity {
     String[] types = {"Lost", "Found"};
     String[] categories = {"Electronics", "Pets", "Wallets", "Documents", "Keys", "Others"};
 
-    ActivityResultLauncher<String> imagePickerLauncher;
+    ActivityResultLauncher<String[]> imagePickerLauncher;
     ActivityResultLauncher<Intent> locationPickerLauncher;
 
     @Override
@@ -76,7 +76,7 @@ public class AddItemActivity extends AppCompatActivity {
         locationEditText.setFocusable(false);
         locationEditText.setOnClickListener(v -> openMapLocationPicker());
         currentLocationButton.setOnClickListener(v -> getCurrentLocation());
-        selectImageButton.setOnClickListener(v -> imagePickerLauncher.launch("image/*"));
+        selectImageButton.setOnClickListener(v -> imagePickerLauncher.launch(new String[]{"image/*"}));
         saveButton.setOnClickListener(v -> saveItem());
     }
 
@@ -107,10 +107,17 @@ public class AddItemActivity extends AppCompatActivity {
 
     private void setupLaunchers() {
         imagePickerLauncher = registerForActivityResult(
-                new ActivityResultContracts.GetContent(),
+                new ActivityResultContracts.OpenDocument(),
                 uri -> {
                     if (uri != null) {
                         selectedImageUri = uri;
+                        try {
+                            getContentResolver().takePersistableUriPermission(
+                                    uri,
+                                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            );
+                        } catch (SecurityException ignored) {
+                        }
                         selectedImageView.setImageURI(uri);
                     }
                 }

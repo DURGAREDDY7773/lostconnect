@@ -3,6 +3,8 @@ package com.example.lostconnect;
 import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -20,7 +22,7 @@ public class MainActivity extends AppCompatActivity {
 
     Spinner categorySpinner;
     Button addButton, showOnMapButton;
-    EditText radiusEditText;
+    EditText searchEditText, radiusEditText;
     RecyclerView itemRecyclerView;
 
     DatabaseHelper databaseHelper;
@@ -35,6 +37,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         categorySpinner = findViewById(R.id.categorySpinner);
+        searchEditText = findViewById(R.id.searchEditText);
         addButton = findViewById(R.id.addButton);
         showOnMapButton = findViewById(R.id.showOnMapButton);
         radiusEditText = findViewById(R.id.radiusEditText);
@@ -52,7 +55,7 @@ public class MainActivity extends AppCompatActivity {
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         categorySpinner.setAdapter(spinnerAdapter);
 
-        loadItems("All");
+        loadItems("All", "");
 
         addButton.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, AddItemActivity.class);
@@ -69,11 +72,26 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 String selectedCategory = categories[position];
-                loadItems(selectedCategory);
+                loadItems(selectedCategory, searchEditText.getText().toString());
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+
+        searchEditText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                loadItems(categorySpinner.getSelectedItem().toString(), s.toString());
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
             }
         });
 
@@ -84,15 +102,16 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
 
         if (categorySpinner != null) {
-            loadItems(categorySpinner.getSelectedItem().toString());
+            String searchText = searchEditText == null ? "" : searchEditText.getText().toString();
+            loadItems(categorySpinner.getSelectedItem().toString(), searchText);
         }
     }
 
-    private void loadItems(String category) {
+    private void loadItems(String category, String searchText) {
 
         itemList = new ArrayList<>();
 
-        Cursor cursor = databaseHelper.getItemsByCategory(category);
+        Cursor cursor = databaseHelper.searchItems(category, searchText);
 
         if (cursor != null && cursor.moveToFirst()) {
             do {
@@ -113,7 +132,9 @@ public class MainActivity extends AppCompatActivity {
                 itemList.add(item);
 
             } while (cursor.moveToNext());
+        }
 
+        if (cursor != null) {
             cursor.close();
         }
 

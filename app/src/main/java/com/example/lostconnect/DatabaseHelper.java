@@ -5,6 +5,8 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.text.TextUtils;
+import java.util.ArrayList;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -89,19 +91,61 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public Cursor getAllItems() {
         SQLiteDatabase db = this.getReadableDatabase();
-        return db.rawQuery("SELECT * FROM " + TABLE_NAME + " ORDER BY " + COL_ID + " DESC", null);
+        return db.query(
+                TABLE_NAME,
+                null,
+                null,
+                null,
+                null,
+                null,
+                COL_TIMESTAMP + " DESC, " + COL_ID + " DESC"
+        );
     }
 
     public Cursor getItemsByCategory(String category) {
-        SQLiteDatabase db = this.getReadableDatabase();
+        return searchItems(category, "");
+    }
 
-        if (category.equals("All")) {
-            return getAllItems();
+    public Cursor searchItems(String category, String searchText) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        ArrayList<String> selectionParts = new ArrayList<>();
+        ArrayList<String> selectionArgs = new ArrayList<>();
+
+        if (category != null && !category.equals("All")) {
+            selectionParts.add(COL_CATEGORY + " = ?");
+            selectionArgs.add(category);
         }
 
-        return db.rawQuery("SELECT * FROM " + TABLE_NAME +
-                        " WHERE " + COL_CATEGORY + " = ? ORDER BY " + COL_ID + " DESC",
-                new String[]{category});
+        if (searchText != null && !searchText.trim().isEmpty()) {
+            String searchPattern = "%" + searchText.trim() + "%";
+            selectionParts.add("(" +
+                    COL_TITLE + " LIKE ? OR " +
+                    COL_DESCRIPTION + " LIKE ? OR " +
+                    COL_LOCATION + " LIKE ? OR " +
+                    COL_TYPE + " LIKE ?" +
+                    ")");
+            selectionArgs.add(searchPattern);
+            selectionArgs.add(searchPattern);
+            selectionArgs.add(searchPattern);
+            selectionArgs.add(searchPattern);
+        }
+
+        String selection = selectionParts.isEmpty()
+                ? null
+                : TextUtils.join(" AND ", selectionParts);
+        String[] args = selectionArgs.isEmpty()
+                ? null
+                : selectionArgs.toArray(new String[0]);
+
+        return db.query(
+                TABLE_NAME,
+                null,
+                selection,
+                args,
+                null,
+                null,
+                COL_TIMESTAMP + " DESC, " + COL_ID + " DESC"
+        );
     }
 
     public Cursor getItemById(int id) {
