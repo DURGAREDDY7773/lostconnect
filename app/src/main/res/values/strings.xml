@@ -1,4 +1,3 @@
 <resources>
     <string name="app_name">lostconnect</string>
-    <string name="google_maps_key">YOUR_API_KEY</string>
 </resources>

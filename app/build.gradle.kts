@@ -1,5 +1,14 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
+}
+
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use { load(it) }
+    }
 }
 
 android {
@@ -18,6 +27,11 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        resValue(
+            "string",
+            "google_maps_key",
+            "\"${localProperties.getProperty("MAPS_API_KEY", "YOUR_API_KEY")}\""
+        )
     }
 
     buildTypes {
@@ -35,6 +49,7 @@ android {
     }
 
     buildFeatures {
+        resValues = true
         viewBinding = true
     }
 }
