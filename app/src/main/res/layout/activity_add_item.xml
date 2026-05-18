@@ -53,6 +53,13 @@
             android:hint="Location"
             android:layout_marginTop="10dp" />
 
+        <Button
+            android:id="@+id/currentLocationButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Get Current Location"
+            android:layout_marginTop="10dp" />
+
         <EditText
             android:id="@+id/contactEditText"
             android:layout_width="match_parent"

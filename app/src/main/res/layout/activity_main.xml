@@ -29,8 +29,23 @@
         android:text="Post Lost / Found Item"
         android:layout_marginTop="12dp" />
 
-    <ListView
-        android:id="@+id/itemListView"
+    <EditText
+        android:id="@+id/radiusEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:hint="Search radius in KM"
+        android:inputType="numberDecimal" />
+
+    <Button
+        android:id="@+id/showOnMapButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="Show on Map" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/itemRecyclerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_marginTop="12dp" />

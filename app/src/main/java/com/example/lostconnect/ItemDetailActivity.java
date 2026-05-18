@@ -1,4 +1,4 @@
-package com.example.lostfoundapp;
+package com.example.lostconnect;
 
 import android.database.Cursor;
 import android.net.Uri;

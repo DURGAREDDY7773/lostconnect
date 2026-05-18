@@ -1,4 +1,4 @@
-package com.example.lostfoundapp;
+package com.example.lostconnect;
 
 import android.content.Intent;
 import android.database.Cursor;
@@ -7,18 +7,21 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.ListView;
+import android.widget.EditText;
 import android.widget.Spinner;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
     Spinner categorySpinner;
-    Button addButton;
-    ListView itemListView;
+    Button addButton, showOnMapButton;
+    EditText radiusEditText;
+    RecyclerView itemRecyclerView;
 
     DatabaseHelper databaseHelper;
     ArrayList<LostFoundItem> itemList;
@@ -33,7 +36,10 @@ public class MainActivity extends AppCompatActivity {
 
         categorySpinner = findViewById(R.id.categorySpinner);
         addButton = findViewById(R.id.addButton);
-        itemListView = findViewById(R.id.itemListView);
+        showOnMapButton = findViewById(R.id.showOnMapButton);
+        radiusEditText = findViewById(R.id.radiusEditText);
+        itemRecyclerView = findViewById(R.id.itemRecyclerView);
+        itemRecyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         databaseHelper = new DatabaseHelper(this);
 
@@ -53,6 +59,12 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
+        showOnMapButton.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, MapActivity.class);
+            intent.putExtra("radius_km", radiusEditText.getText().toString().trim());
+            startActivity(intent);
+        });
+
         categorySpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -65,13 +77,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        itemListView.setOnItemClickListener((parent, view, position, id) -> {
-            LostFoundItem selectedItem = itemList.get(position);
-
-            Intent intent = new Intent(MainActivity.this, ItemDetailActivity.class);
-            intent.putExtra("item_id", selectedItem.id);
-            startActivity(intent);
-        });
     }
 
     @Override
@@ -98,6 +103,8 @@ public class MainActivity extends AppCompatActivity {
                         cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_CATEGORY)),
                         cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_DESCRIPTION)),
                         cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_LOCATION)),
+                        cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_LATITUDE)),
+                        cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_LONGITUDE)),
                         cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_CONTACT)),
                         cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_IMAGE)),
                         cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_DATE))
@@ -110,7 +117,11 @@ public class MainActivity extends AppCompatActivity {
             cursor.close();
         }
 
-        itemAdapter = new ItemAdapter(this, itemList);
-        itemListView.setAdapter(itemAdapter);
+        itemAdapter = new ItemAdapter(this, itemList, selectedItem -> {
+            Intent intent = new Intent(MainActivity.this, ItemDetailActivity.class);
+            intent.putExtra("item_id", selectedItem.id);
+            startActivity(intent);
+        });
+        itemRecyclerView.setAdapter(itemAdapter);
     }
 }
