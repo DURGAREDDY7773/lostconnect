@@ -153,7 +153,7 @@ public class AddItemActivity extends AppCompatActivity {
                 Place.Field.ADDRESS,
                 Place.Field.LAT_LNG
         );
-        Intent intent = new Autocomplete.IntentBuilder(AutocompleteActivityMode.OVERLAY, fields)
+        Intent intent = new Autocomplete.IntentBuilder(AutocompleteActivityMode.FULLSCREEN, fields)
                 .build(this);
         autocompleteLauncher.launch(intent);
     }
