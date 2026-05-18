@@ -26,10 +26,13 @@ import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
 import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.model.AutocompletePrediction;
+import com.google.android.libraries.places.api.model.AutocompleteSessionToken;
 import com.google.android.libraries.places.api.model.Place;
-import com.google.android.libraries.places.widget.Autocomplete;
-import com.google.android.libraries.places.widget.AutocompleteActivity;
-import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
+import com.google.android.libraries.places.api.net.FetchPlaceRequest;
+import com.google.android.libraries.places.api.net.PlacesClient;
+import com.google.android.libraries.places.widget.PlaceAutocomplete;
+import com.google.android.libraries.places.widget.PlaceAutocompleteActivity;
 
 import java.util.Arrays;
 import java.util.List;
@@ -89,7 +92,7 @@ public class AddItemActivity extends AppCompatActivity {
     private void initialisePlaces() {
         String apiKey = getString(R.string.google_maps_key);
         if (!Places.isInitialized() && !"YOUR_API_KEY".equals(apiKey)) {
-            Places.initialize(getApplicationContext(), apiKey);
+            Places.initializeWithNewPlacesApiEnabled(getApplicationContext(), apiKey);
         }
     }
 
@@ -125,16 +128,14 @@ public class AddItemActivity extends AppCompatActivity {
         autocompleteLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
-                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                        Place place = Autocomplete.getPlaceFromIntent(result.getData());
-                        if (place.getLatLng() != null) {
-                            selectedLatitude = place.getLatLng().latitude;
-                            selectedLongitude = place.getLatLng().longitude;
-                            hasSelectedCoordinates = true;
+                    if (result.getResultCode() == PlaceAutocompleteActivity.RESULT_OK && result.getData() != null) {
+                        AutocompletePrediction prediction = PlaceAutocomplete.getPredictionFromIntent(result.getData());
+                        AutocompleteSessionToken sessionToken = PlaceAutocomplete.getSessionTokenFromIntent(result.getData());
+                        if (prediction != null) {
+                            fetchSelectedPlace(prediction.getPlaceId(), sessionToken, prediction.getFullText(null).toString());
                         }
-                        locationEditText.setText(place.getAddress());
-                    } else if (result.getResultCode() == AutocompleteActivity.RESULT_ERROR && result.getData() != null) {
-                        Status status = Autocomplete.getStatusFromIntent(result.getData());
+                    } else if (result.getResultCode() == PlaceAutocompleteActivity.RESULT_ERROR && result.getData() != null) {
+                        Status status = PlaceAutocomplete.getResultStatusFromIntent(result.getData());
                         Toast.makeText(this, "Places error: " + status.getStatusMessage(), Toast.LENGTH_LONG).show();
                     }
                 }
@@ -147,15 +148,32 @@ public class AddItemActivity extends AppCompatActivity {
             return;
         }
 
-        List<Place.Field> fields = Arrays.asList(
-                Place.Field.ID,
-                Place.Field.NAME,
-                Place.Field.ADDRESS,
-                Place.Field.LAT_LNG
-        );
-        Intent intent = new Autocomplete.IntentBuilder(AutocompleteActivityMode.FULLSCREEN, fields)
+        Intent intent = new PlaceAutocomplete.IntentBuilder()
                 .build(this);
         autocompleteLauncher.launch(intent);
+    }
+
+    private void fetchSelectedPlace(String placeId, AutocompleteSessionToken sessionToken, String fallbackAddress) {
+        PlacesClient placesClient = Places.createClient(this);
+        List<Place.Field> fields = Arrays.asList(Place.Field.ADDRESS, Place.Field.LAT_LNG);
+        FetchPlaceRequest request = FetchPlaceRequest.builder(placeId, fields)
+                .setSessionToken(sessionToken)
+                .build();
+
+        placesClient.fetchPlace(request)
+                .addOnSuccessListener(response -> {
+                    Place place = response.getPlace();
+                    if (place.getLatLng() != null) {
+                        selectedLatitude = place.getLatLng().latitude;
+                        selectedLongitude = place.getLatLng().longitude;
+                        hasSelectedCoordinates = true;
+                    }
+
+                    String address = place.getAddress() != null ? place.getAddress() : fallbackAddress;
+                    locationEditText.setText(address);
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Unable to load selected place details", Toast.LENGTH_SHORT).show());
     }
 
     private void getCurrentLocation() {
