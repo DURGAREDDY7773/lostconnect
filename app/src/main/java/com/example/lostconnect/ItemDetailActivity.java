@@ -56,6 +56,8 @@ public class ItemDetailActivity extends AppCompatActivity {
             String category = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_CATEGORY));
             String description = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_DESCRIPTION));
             String location = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_LOCATION));
+            double latitude = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_LATITUDE));
+            double longitude = cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_LONGITUDE));
             String contact = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_CONTACT));
             String image = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_IMAGE));
             String date = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COL_DATE));
@@ -64,7 +66,7 @@ public class ItemDetailActivity extends AppCompatActivity {
             detailCategory.setText("Category: " + category);
             detailDate.setText("Posted on: " + date);
             detailDescription.setText("Description: " + description);
-            detailLocation.setText("Location: " + location);
+            detailLocation.setText("Location: " + location + "\nLat/Lng: " + latitude + ", " + longitude);
             detailContact.setText("Contact: " + contact);
 
             try {

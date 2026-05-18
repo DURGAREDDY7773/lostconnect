@@ -42,6 +42,7 @@ public class ItemAdapter extends RecyclerView.Adapter<ItemAdapter.ItemViewHolder
 
         holder.titleText.setText(item.type + ": " + item.title);
         holder.categoryText.setText("Category: " + item.category);
+        holder.locationText.setText("Location: " + item.location);
         holder.dateText.setText("Posted: " + item.date);
         holder.itemView.setOnClickListener(v -> clickListener.onItemClick(item));
 
@@ -59,13 +60,14 @@ public class ItemAdapter extends RecyclerView.Adapter<ItemAdapter.ItemViewHolder
 
     static class ItemViewHolder extends RecyclerView.ViewHolder {
         ImageView imageView;
-        TextView titleText, categoryText, dateText;
+        TextView titleText, categoryText, locationText, dateText;
 
         ItemViewHolder(@NonNull View itemView) {
             super(itemView);
             imageView = itemView.findViewById(R.id.itemImage);
             titleText = itemView.findViewById(R.id.itemTitle);
             categoryText = itemView.findViewById(R.id.itemCategory);
+            locationText = itemView.findViewById(R.id.itemLocation);
             dateText = itemView.findViewById(R.id.itemDate);
         }
     }

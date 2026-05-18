@@ -99,7 +99,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
         googleMap.clear();
         Cursor cursor = databaseHelper.getAllItems();
-        boolean movedCamera = false;
+        boolean movedCameraToItem = false;
 
         if (userLatLng != null) {
             googleMap.addMarker(new MarkerOptions()
@@ -145,16 +145,16 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                         .snippet(type + "\n" + address + "\n" + date)
                         .icon(BitmapDescriptorFactory.defaultMarker(markerColor)));
 
-                if (!movedCamera && userLatLng == null) {
+                if (!movedCameraToItem && (userLatLng == null || radiusKm <= 0)) {
                     googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(itemPosition, 13f));
-                    movedCamera = true;
+                    movedCameraToItem = true;
                 }
             } while (cursor.moveToNext());
 
             cursor.close();
         }
 
-        if (!movedCamera && userLatLng == null) {
+        if (!movedCameraToItem && userLatLng == null) {
             googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(MELBOURNE, 11f));
         }
     }
